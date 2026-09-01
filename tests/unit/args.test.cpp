@@ -49,6 +49,39 @@ describe("Args", []() {
     expect(args.fm_channel_count).toBe(3);
   });
 
+  it("defaults tempo to 1.0", []() {
+    char in[] = "a.vgm";
+    char out[] = "b.vgm";
+    char *argv[] = {P, in, out};
+    Args args;
+    ErrorCode err = ERR_INTERNAL;
+    expect(Args_Parse(3, argv, &args, &err)).toBeTruthy();
+    expect(args.tempo).toBe(1.0, 1e-9);
+  });
+
+  it("parses --tempo", []() {
+    char in[] = "a.vgm";
+    char out[] = "b.vgm";
+    char flag[] = "--tempo";
+    char val[] = "1.15";
+    char *argv[] = {P, in, out, flag, val};
+    Args args;
+    ErrorCode err = ERR_INTERNAL;
+    expect(Args_Parse(5, argv, &args, &err)).toBeTruthy();
+    expect(args.tempo).toBe(1.15, 1e-9);
+  });
+
+  it("rejects a non-positive tempo", []() {
+    char in[] = "a.vgm";
+    char out[] = "b.vgm";
+    char flag[] = "--tempo=0";
+    char *argv[] = {P, in, out, flag};
+    Args args;
+    ErrorCode err = ERR_NONE;
+    expect(Args_Parse(4, argv, &args, &err)).toBeFalsy();
+    expect((int)err).toBe((int)ERR_BAD_ARGS);
+  });
+
   it("fails when output is missing", []() {
     char in[] = "a.vgm";
     char *argv[] = {P, in};

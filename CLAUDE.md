@@ -134,7 +134,7 @@ feeds the produced MD VGM to `xgmtool` to confirm a valid `.xgm` results.
 ## Full pipeline (produce an XGM)
 
 ```
-scripts/convert.sh input.vgm output.xgm [--fm-channels 0,1,2,3,5,7] [xgmtool flags]
+scripts/convert.sh input.vgm output.xgm [--fm-channels 0,1,2,3,5,7] [--tempo x] [xgmtool flags]
 ```
 Stage 1 (this tool) → MD VGM; stage 2 (xgmtool) → XGM. The script stops on
 the first failing stage and reports which.

@@ -1,9 +1,22 @@
 #include <args.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 enum { FM_CHANNELS_MAX = 8, CHANNEL_VALUE_MAX = 255 };
+
+static bool parseTempo(const char *text, double *out, ErrorCode *error) {
+  char *end;
+  double value = strtod(text, &end);
+  if (end == text || *end != '\0' || value <= 0.0) {
+    fprintf(stderr, "tempo: invalid multiplier '%s' (must be > 0)\n", text);
+    *error = ERR_BAD_ARGS;
+    return false;
+  }
+  *out = value;
+  return true;
+}
 
 static bool parseChannelList(const char *list, uint8_t *out, int *count, ErrorCode *error) {
   int n = 0;
@@ -64,6 +77,7 @@ bool Args_Parse(int argc, char **argv, Args *out, ErrorCode *error) {
   out->input = NULL;
   out->output = NULL;
   out->fm_channel_count = -1;
+  out->tempo = 1.0;
 
   const char *program = argc > 0 ? argv[0] : "x68k-md-vgm-conv";
   int positional = 0;
@@ -81,6 +95,19 @@ bool Args_Parse(int argc, char **argv, Args *out, ErrorCode *error) {
       }
     } else if (strncmp(arg, "--fm-channels=", 14) == 0) {
       if (!parseChannelList(arg + 14, out->fm_channels, &out->fm_channel_count, error)) {
+        return false;
+      }
+    } else if (strcmp(arg, "--tempo") == 0) {
+      if (i + 1 >= argc) {
+        fprintf(stderr, "--tempo requires a value\n");
+        *error = ERR_BAD_ARGS;
+        return false;
+      }
+      if (!parseTempo(argv[++i], &out->tempo, error)) {
+        return false;
+      }
+    } else if (strncmp(arg, "--tempo=", 8) == 0) {
+      if (!parseTempo(arg + 8, &out->tempo, error)) {
         return false;
       }
     } else if (arg[0] == '-' && arg[1] != 0) {
@@ -101,7 +128,9 @@ bool Args_Parse(int argc, char **argv, Args *out, ErrorCode *error) {
   }
 
   if (!out->input || !out->output) {
-    fprintf(stderr, "usage: %s <input.vgm> <output.vgm> [--fm-channels a,b,c,...]\n", program);
+    fprintf(stderr,
+            "usage: %s <input.vgm> <output.vgm> [--fm-channels a,b,c,...] [--tempo x]\n",
+            program);
     *error = ERR_BAD_ARGS;
     return false;
   }

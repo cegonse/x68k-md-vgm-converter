@@ -34,8 +34,11 @@ while [ "$#" -gt 0 ]; do
         --fm-channels)
             [ "$#" -ge 2 ] || { echo "error: --fm-channels needs a value" >&2; exit 2; }
             TOOL_ARGS+=("$1" "$2"); shift 2 ;;
-        --fm-channels=*)
+        --fm-channels=*|--tempo=*)
             TOOL_ARGS+=("$1"); shift ;;
+        --tempo)
+            [ "$#" -ge 2 ] || { echo "error: --tempo needs a value" >&2; exit 2; }
+            TOOL_ARGS+=("$1" "$2"); shift 2 ;;
         --keep-intermediate)
             KEEP_INTERMEDIATE=1; shift ;;
         *)

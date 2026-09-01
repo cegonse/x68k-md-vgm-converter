@@ -16,6 +16,9 @@ typedef struct WalkContext {
   FmTranscriber *fm;
   PcmStream *pcm;
   VGMWriter *writer;
+  double tempo;        /* speed multiplier (>1 = faster) */
+  double want;         /* cumulative desired output samples */
+  uint64_t emitted;    /* cumulative emitted output samples */
 } WalkContext;
 
 static void onYm2151(void *ctx, uint8_t reg, uint8_t value) {
@@ -25,7 +28,12 @@ static void onOki(void *ctx, uint8_t reg, uint8_t value) {
   PcmStream_OkiWrite(((WalkContext *)ctx)->pcm, reg, value);
 }
 static void onWait(void *ctx, uint32_t samples) {
-  VGMWriter_WaitSamples(((WalkContext *)ctx)->writer, samples);
+  WalkContext *c = (WalkContext *)ctx;
+  /* Scale the timeline by 1/tempo, accumulating so rounding never drifts. */
+  c->want += (double)samples / c->tempo;
+  uint64_t target = (uint64_t)(c->want + 0.5);
+  VGMWriter_WaitSamples(c->writer, (uint32_t)(target - c->emitted));
+  c->emitted = target;
 }
 static void onDataBlock(void *ctx, uint8_t type, const uint8_t *data, uint32_t size) {
   PcmStream_AddDataBlock(((WalkContext *)ctx)->pcm, type, data, size);
@@ -115,7 +123,7 @@ int App_Run(int argc, char **argv) {
     return err;
   }
 
-  WalkContext ctx = {fm, pcm, writer};
+  WalkContext ctx = {fm, pcm, writer, args.tempo, 0.0, 0};
   VGMWalker walker;
   memset(&walker, 0, sizeof walker);
   walker.ym2151_write = onYm2151;
@@ -134,6 +142,9 @@ int App_Run(int argc, char **argv) {
     result = err;
   } else {
     printDropSummary(FmTranscriber_Drops(fm), has_pcm, keep_count);
+    if (args.tempo != 1.0) {
+      fprintf(stderr, "  tempo scaled x%.3f\n", args.tempo);
+    }
   }
 
   PcmStream_Destroy(pcm);
