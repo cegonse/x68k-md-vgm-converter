@@ -217,8 +217,16 @@ Per `chips/oki-m6258.md` (Option P1 — decode in the tool):
 3. **Decode** 4-bit ADPCM → linear PCM using the verified XM6 algorithm
    (step table `1.1^step`, `index_shift`, leaky-integrator
    `(sample<<8 + signal*245)>>8`, per-sample state reset `signal=-2,
-   step=0`). Emit **16-bit signed linear PCM** — do not down-convert to
-   8-bit, do not resample.
+   step=0`). **Down-convert to 8-bit unsigned** (`(sample>>6)+0x80`, i.e.
+   the 10-bit signal mapped to 8-bit, centred at `0x80`); do **not**
+   resample.
+   > **Deviation from the original Option P1 (16-bit, no down-convert).**
+   > The xgmtool we build (1.x) has **no 16-bit sample path**: its
+   > `resample()` reads the data block as 8-bit unsigned (`data[i]&0xFF -
+   > 0x80`) and its DAC-stream setup is `0x90 id 02 00 2A`. Handing it
+   > 16-bit data yields garbled, double-length audio. So the tool emits
+   > 8-bit unsigned here and still lets xgmtool own the **resampling** to
+   > 14 kHz.
 4. **Determine native sample rate** from clock (`0x90`) + divider (`0x94`)
    with the half-rate correction: `sample_rate = clock / (divider*2)`
    (rounded). Tag the emitted PCM with this rate.

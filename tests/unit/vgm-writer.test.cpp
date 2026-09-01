@@ -28,7 +28,7 @@ describe("VGMWriter", []() {
     const uint8_t *b = VGMWriter_Bytes(w, &n);
     expect(b).toBeNotNull();
     expect(std::memcmp(b, "Vgm ", 4) == 0).toBeTruthy();
-    expect(u32(b, 0x08)).toBe((uint32_t)0x00000151);
+    expect(u32(b, 0x08)).toBe((uint32_t)0x00000161);
     expect(u32(b, 0x2C)).toBe((uint32_t)7670442);   // YM2612 clock
     expect(u32(b, 0x30)).toBe((uint32_t)0);          // YM2151 clock zeroed
     expect(u32(b, 0x0C)).toBe((uint32_t)0);          // SN76489 clock zeroed

@@ -14,6 +14,7 @@ typedef struct VGMWalker {
   void (*data_block)(void *context, uint8_t type, const uint8_t *data, uint32_t size);
   void (*dac_stream)(void *context, uint8_t command, const uint8_t *operands, uint32_t length);
   void (*pcm_seek)(void *context, uint32_t offset);
+  void (*loop_point)(void *context);
   void (*end)(void *context);
 } VGMWalker;
 

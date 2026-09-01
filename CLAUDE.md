@@ -52,10 +52,12 @@ quantization, and sample dedup. **This tool must not do xgmtool's jobs.**
 - **PCM reserves YM2612 channel 6.** When the source has OKIM6258 PCM, ch6
   is auto-reserved for DAC (this is the driver's design), so FM maxes at 5.
 - **PCM path = decode in the tool (Option P1).** Decode OKIM6258 4-bit
-  ADPCM → linear PCM (16-bit signed), tag it with the native source rate,
-  emit as a YM2612 type-`0x00` data block + DAC-stream commands + DAC
-  enable. **Do not resample and do not down-convert to 8-bit** — xgmtool
-  does both.
+  ADPCM → linear PCM, **down-convert to 8-bit unsigned** (`(s>>6)+0x80`),
+  tag it with the native source rate, emit as a YM2612 type-`0x00` data
+  block + DAC-stream commands + DAC enable. **Do not resample** — xgmtool
+  does that. (Bit-depth deviation from the original P1 wording: the xgmtool
+  we build reads the block as 8-bit unsigned and has no 16-bit path — see
+  `docs/conversion-mapping.md` §8.)
 - **No resampler dependency.** xgmtool resamples to 14 kHz. Removed from
   scope.
 - **SN76489 PSG unused** (no X68000 source equivalent); emit none.

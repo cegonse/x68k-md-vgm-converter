@@ -59,7 +59,8 @@ foreach(TEST_FILE ${TEST_FILES})
     target_link_options(${EXEC_NAME} PRIVATE ${SAN_LINK})
     target_link_libraries(${EXEC_NAME} PRIVATE ZLIB::ZLIB m)
     target_compile_definitions(${EXEC_NAME} PRIVATE
-        FIXTURES_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
+        FIXTURES_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures"
+        XGMTOOL_BIN="${CMAKE_SOURCE_DIR}/external/xgmtool/build/xgmtool")
     add_test(NAME ${EXEC_NAME} COMMAND ${EXEC_NAME})
     add_dependencies(build_tests ${EXEC_NAME})
 endforeach()

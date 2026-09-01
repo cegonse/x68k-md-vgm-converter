@@ -120,6 +120,16 @@ void VGMWriter_DataBlock(VGMWriter *self, uint8_t type, const uint8_t *data, uin
   self->stream_size += size;
 }
 
+void VGMWriter_DacStream(VGMWriter *self, uint8_t command, const uint8_t *operands, uint32_t length) {
+  if (!self) {
+    return;
+  }
+  appendByte(self, command);
+  for (uint32_t i = 0; i < length; i++) {
+    appendByte(self, operands[i]);
+  }
+}
+
 void VGMWriter_MarkLoop(VGMWriter *self) {
   if (!self) {
     return;
@@ -156,7 +166,7 @@ const uint8_t *VGMWriter_Bytes(VGMWriter *self, size_t *size) {
 
   memcpy(buffer + VGM_HDR_IDENT, "Vgm ", 4);
   putU32(buffer + VGM_HDR_EOF_OFFSET, (uint32_t)(total - 4));
-  putU32(buffer + VGM_HDR_VERSION, VGM_VERSION_1_51);
+  putU32(buffer + VGM_HDR_VERSION, VGM_OUTPUT_VERSION);
   putU32(buffer + VGM_HDR_TOTAL_SAMPLES, self->total_samples);
   if (self->has_loop) {
     uint32_t loop_abs = (uint32_t)(VGM_HEADER_SIZE + self->loop_stream_offset);

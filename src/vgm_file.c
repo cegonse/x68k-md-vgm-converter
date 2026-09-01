@@ -298,8 +298,14 @@ bool VGMFile_Walk(VGMFile *self, const VGMWalker *w, void *ctx, ErrorCode *error
 
   const uint8_t *b = self->bytes;
   size_t pos = self->data_start;
+  bool loop_fired = false;
 
   while (pos < self->size) {
+    if (!loop_fired && self->loop_offset && pos == self->loop_offset) {
+      if (w->loop_point) w->loop_point(ctx);
+      loop_fired = true;
+    }
+
     uint8_t cmd = b[pos];
 
     if (cmd == VGM_CMD_END) {
