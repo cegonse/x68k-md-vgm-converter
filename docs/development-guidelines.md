@@ -43,12 +43,23 @@ tool focused; resist pulling downstream concerns into it.
   Never narrate the code. Default to zero comments.
 - **Descriptive names** for variables and functions. `ym2151_channel`, not
   `ch`; `read_data_block`, not `rdb`.
-- **Function signature form.** Every function matches
+- **Function signature form.** Every *public* function matches
   `return_type Module_Function(type arg_name, type other_arg)` — the
   module/type name in `PascalCase`, an underscore, then the function in
   `PascalCase`. **Declarations name their parameters**, not just their
   types. This applies to the app entry point too:
   `int App_Run(int argc, char **argv)` (the one function `main()` calls).
+- **Static (file-local) functions use `lowerCamelCase`:** `readHeader()`,
+  `appendByte()`, `operandLength()`. The `Module_` prefix is reserved for
+  the public surface, so the casing tells you at a glance whether a function
+  is part of a module's API or a private helper.
+- **No domain magic numbers — back them with a named enum.** Command bytes,
+  register numbers, header field offsets, format versions and the like get
+  a named `enum` value (e.g. `VgmCommand`, `VgmHeaderField`,
+  `Ym2612Register`) rather than an inline hex literal. Introduce the enum
+  value when the code first needs it; don't pre-populate unused constants.
+  Genuinely structural tables (e.g. an opcode length-classification lookup)
+  may stay numeric where naming each boundary would only obscure them.
 - **Short functions.** Aim for 15–20 lines. Not a hard rule, but if a
   function grows past that, look for a block to extract.
 - **Indentation: 2 spaces, no tabs.** One additional 2-space level per

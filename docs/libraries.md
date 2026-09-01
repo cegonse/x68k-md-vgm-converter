@@ -125,6 +125,9 @@ not add a resampling library.
 - a C toolchain (C99-capable; clang on macOS, gcc/clang on Linux),
 - **CMake** ≥ 3.22,
 - **git** (with sparse-checkout support preferred for the xgmtool clone),
+- **zlib** development files (headers + library) — the tool's one linked
+  system library, used for transparent `.vgz`/gzipped-`.vgm` decompression.
+  `init.sh` verifies it by compiling a stub that links `-lz`.
 - a POSIX shell / bash for the scripts.
 
 No pre-installed VGM/XGM tooling is required — that's what `init.sh` is

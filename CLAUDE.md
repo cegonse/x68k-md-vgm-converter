@@ -40,9 +40,11 @@ quantization, and sample dedup. **This tool must not do xgmtool's jobs.**
 ## Locked decisions (don't relitigate)
 
 - **Decoupled tool + scripts.** The C tool is single-purpose and links
-  against nothing external. `scripts/convert.sh` orchestrates the full
-  pipeline to XGM; `scripts/init.sh` sets up external tools so the user
-  needs only a C toolchain, CMake, and git.
+  against none of the external *tools* (vgmtools/xgmtool). Its one linked
+  system library is **zlib** (required, for transparent `.vgz`/gzip input);
+  `init.sh` verifies zlib up front. `scripts/convert.sh` orchestrates the
+  full pipeline to XGM; `scripts/init.sh` sets up external tools so the user
+  needs only a C toolchain, CMake, git, and zlib dev files.
 - **FM channel selection.** `--fm-channels 0,1,2,3,5,7` — explicit keep-list
   of YM2151 channel indices (0–7), no dupes, max 6 (max **5** when the
   source has PCM). Positional mapping: sorted keep-list → YM2612 channels

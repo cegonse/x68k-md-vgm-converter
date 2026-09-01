@@ -32,13 +32,32 @@ require git
 require cmake
 require curl
 
-if command -v cc >/dev/null 2>&1; then :;
-elif command -v gcc >/dev/null 2>&1; then :;
-elif command -v clang >/dev/null 2>&1; then :;
+if [ -n "${CC:-}" ]; then CC_BIN="$CC";
+elif command -v cc >/dev/null 2>&1; then CC_BIN="cc";
+elif command -v gcc >/dev/null 2>&1; then CC_BIN="gcc";
+elif command -v clang >/dev/null 2>&1; then CC_BIN="clang";
 else
     echo "error: a C compiler (cc/gcc/clang) is required" >&2
     exit 1
 fi
+
+# zlib is a hard requirement (transparent .vgz / gzipped-.vgm decompression).
+# Verify by compiling a stub that links against it.
+echo "==> checking zlib"
+zlib_check_dir="$(mktemp -d)"
+cat > "$zlib_check_dir/zlibcheck.c" <<'EOF'
+#include <zlib.h>
+int main(void) { return zlibVersion()[0] == 0; }
+EOF
+if ! "$CC_BIN" "$zlib_check_dir/zlibcheck.c" -lz -o "$zlib_check_dir/zlibcheck" >/dev/null 2>&1; then
+    rm -rf "$zlib_check_dir"
+    echo "error: zlib is required but a stub failed to compile/link against it." >&2
+    echo "       install zlib development files, e.g.:" >&2
+    echo "         Debian/Ubuntu: apt-get install zlib1g-dev" >&2
+    echo "         macOS:         brew install zlib" >&2
+    exit 1
+fi
+rm -rf "$zlib_check_dir"
 
 if command -v sha256sum >/dev/null 2>&1; then
     sha256_of() { sha256sum "$1" | awk '{print $1}'; }
