@@ -1,0 +1,5 @@
+# Out-of-source CMake build tree
+/build/
+
+# Populated by scripts/init.sh (external tools, never vendored)
+/external/
