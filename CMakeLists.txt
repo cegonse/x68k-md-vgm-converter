@@ -15,7 +15,7 @@ add_executable(${TOOL_NAME} ${TOOL_ALL_SOURCES})
 target_include_directories(${TOOL_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/inc)
 target_compile_options(${TOOL_NAME} PRIVATE
     -std=c99 -Wall -Wextra -Werror)
-target_link_libraries(${TOOL_NAME} PRIVATE ZLIB::ZLIB)
+target_link_libraries(${TOOL_NAME} PRIVATE ZLIB::ZLIB m)
 
 # ---------------------------------------------------------------------------
 # Tests: one executable per *.test.cpp (mirrors the cegonse/cest pattern).
@@ -57,7 +57,7 @@ foreach(TEST_FILE ${TEST_FILES})
         $<$<COMPILE_LANGUAGE:C>:-std=c99>
         ${SAN_COMPILE})
     target_link_options(${EXEC_NAME} PRIVATE ${SAN_LINK})
-    target_link_libraries(${EXEC_NAME} PRIVATE ZLIB::ZLIB)
+    target_link_libraries(${EXEC_NAME} PRIVATE ZLIB::ZLIB m)
     target_compile_definitions(${EXEC_NAME} PRIVATE
         FIXTURES_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
     add_test(NAME ${EXEC_NAME} COMMAND ${EXEC_NAME})
