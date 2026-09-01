@@ -47,6 +47,7 @@ describe("Full pipeline: feena.vgz -> MD VGM -> xgmtool", []() {
     expect(VGMFile_YM2151Clock(f)).toBe((uint32_t)0);
     expect(VGMFile_OKIClock(f)).toBe((uint32_t)0);
     expect(VGMFile_Version(f)).toBe((uint32_t)0x00000161);
+    expect(VGMFile_Rate(f)).toBe((uint32_t)60);  // explicit NTSC (X68000 is 60 Hz)
     expect(VGMFile_TotalSamples(f)).toBe((uint32_t)4484386);
     expect(VGMFile_LoopSamples(f)).toBe((uint32_t)3374856);
 

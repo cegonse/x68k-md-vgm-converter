@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vgm_file.h>
+#include <vgm_format.h>
 #include <vgm_writer.h>
 #include <ym2612.h>
 
@@ -87,8 +88,11 @@ int App_Run(int argc, char **argv) {
   }
 
   bool has_pcm = VGMFile_OKIClock(vgm) != 0;
-  uint32_t rate = VGMFile_Rate(vgm);
-  uint32_t clock_2612 = (rate == 50) ? YM2612_CLOCK_PAL : YM2612_CLOCK_NTSC;
+  /* X68000 is a 60 Hz (NTSC-timed) machine; its VGMs usually leave Rate
+   * unspecified (0). Emit an explicit NTSC rate so players don't fall back to
+   * 50 Hz and drag playback ~17% slow. Honor an explicit PAL source only. */
+  uint32_t out_rate = (VGMFile_Rate(vgm) == VGM_RATE_PAL) ? VGM_RATE_PAL : VGM_RATE_NTSC;
+  uint32_t clock_2612 = (out_rate == VGM_RATE_PAL) ? YM2612_CLOCK_PAL : YM2612_CLOCK_NTSC;
 
   uint8_t keep[8];
   int keep_count;
@@ -100,7 +104,7 @@ int App_Run(int argc, char **argv) {
     return err;
   }
 
-  VGMWriter *writer = VGMWriter_Create(clock_2612, rate, &err);
+  VGMWriter *writer = VGMWriter_Create(clock_2612, out_rate, &err);
   FmTranscriber *fm = writer ? FmTranscriber_Create(&map, clock_2151, clock_2612, writer, &err) : NULL;
   PcmStream *pcm = fm ? PcmStream_Create(VGMFile_OKIClock(vgm), VGMFile_OKIFlags(vgm), writer, &err) : NULL;
   if (!writer || !fm || !pcm) {

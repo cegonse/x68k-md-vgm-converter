@@ -183,6 +183,11 @@ Key events for **dropped** channels produce no output.
   **7670442** (or the PAL value if the source `Rate` at `0x24` indicates
   PAL: 7600489). Emit consistently; the pitch math (§4) must use the same
   value chosen here.
+- **Rate** (`0x24`): emit **60** (NTSC). The X68000 is a 60 Hz machine but
+  its VGMs commonly leave Rate at 0 (unspecified); writing 0 through makes
+  players fall back to 50 Hz and drag playback ~17% slow. Emit 50 only if the
+  source `Rate` is explicitly PAL (and then use the PAL clock, to keep §4's
+  pitch math consistent with the chosen clock).
 - **YM2151 clock, OKIM6258 clock, SN76489 clock, all others**: 0.
 - Carry across **loop offset** (`0x1C`) and **loop # samples** (`0x20`),
   translated to the emitted stream's positions.
