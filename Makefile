@@ -2,14 +2,17 @@
 # lives here; it only orchestrates. See CLAUDE.md and docs/.
 
 BUILD_DIR    := build
+WEB_DIR      := web
 EXTERNAL_DIR := external
+
+TOOL_SOURCES := $(wildcard src/*.c)
 
 CEST_HEADER  := $(EXTERNAL_DIR)/cest/cest
 CEST_RUNNER  := $(EXTERNAL_DIR)/cest/cest-runner
 XGMTOOL_BIN  := $(EXTERNAL_DIR)/xgmtool/build/xgmtool
 VGM2TXT_BIN  := $(EXTERNAL_DIR)/vgmtools/build/vgm2txt
 
-.PHONY: all init test clean ensure-init
+.PHONY: all init test clean ensure-init web
 
 # Default: ensure external tools exist, then incrementally build the tool.
 all: ensure-init
@@ -38,6 +41,19 @@ test: ensure-init
 	cmake --build $(BUILD_DIR) --target build_tests
 	"$(CEST_RUNNER)" $(BUILD_DIR)/
 
+# Build the WebAssembly converter + bootstrap page into web/. The C core is
+# reused verbatim (main.c drives App_Run); the page calls it over Emscripten's
+# virtual FS. Requires an Emscripten toolchain (emcc) in PATH.
+web:
+	@command -v emcc >/dev/null 2>&1 || { \
+	  echo "error: emcc not found; install/activate the Emscripten SDK" >&2; exit 1; }
+	emcc $(TOOL_SOURCES) -Iinc -std=c99 -O2 -sUSE_ZLIB=1 \
+	  -sMODULARIZE=1 -sEXPORT_NAME=createVgmModule \
+	  -sEXPORTED_RUNTIME_METHODS=callMain,FS \
+	  -sINVOKE_RUN=0 -sEXIT_RUNTIME=0 -sALLOW_MEMORY_GROWTH=1 \
+	  -o $(WEB_DIR)/vgmconv.js
+	@echo "==> web build ready: open $(WEB_DIR)/index.html via a local HTTP server"
+
 # Clean build artifacts only; leave external/ intact (re-fetching is costly).
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(WEB_DIR)/vgmconv.js $(WEB_DIR)/vgmconv.wasm

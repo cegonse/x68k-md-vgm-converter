@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>X68000 &rarr; Mega Drive VGM Converter</title>
+  <style>
+    :root {
+      --bg: #14161c;
+      --panel: #1e2230;
+      --ink: #e6e8ef;
+      --muted: #9aa0b4;
+      --accent: #5c7cfa;
+      --accent-ink: #ffffff;
+      --err: #ff5a5a;
+      --warn: #ffc234;
+      --line: #2b3040;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    main {
+      width: 100%;
+      max-width: 560px;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 4px;
+    }
+    p.sub {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    label.field {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input[type="file"] {
+      width: 100%;
+      color: var(--muted);
+      background: #12141b;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      cursor: pointer;
+    }
+    .channels {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .chan {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #12141b;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chan input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .count {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .msg {
+      display: none;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 13.5px;
+      font-weight: 500;
+    }
+    .msg.show { display: block; }
+    .msg.error { background: rgba(255, 90, 90, .12); color: var(--err); border: 1px solid rgba(255, 90, 90, .4); }
+    .msg.warn  { background: rgba(255, 194, 52, .12); color: var(--warn); border: 1px solid rgba(255, 194, 52, .4); }
+    button {
+      width: 100%;
+      background: var(--accent);
+      color: var(--accent-ink);
+      border: 0;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 12px;
+      min-height: 18px;
+      white-space: pre-wrap;
+    }
+    a.hidden-dl { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>X68000 &rarr; Mega Drive VGM</h1>
+    <p class="sub">Transcribe an X68000 <code>.vgm</code>/<code>.vgz</code> (YM2151 + OKIM6258) into a Mega Drive VGM (YM2612 + DAC). Runs entirely in your browser.</p>
+
+    <div class="panel">
+      <label class="field" for="file">Source file</label>
+      <input id="file" type="file" accept=".vgm,.vgz">
+    </div>
+
+    <div class="panel">
+      <label class="field">FM channels to keep</label>
+      <div class="channels" id="channels"></div>
+      <div class="count" id="count">0 selected</div>
+      <div class="msg error" id="err"></div>
+      <div class="msg warn" id="warn"></div>
+    </div>
+
+    <button id="convert" disabled>Convert</button>
+    <div class="status" id="status"></div>
+    <a id="download" class="hidden-dl"></a>
+  </main>
+
+  <script src="vgmconv.js"></script>
+  <script>
+    (function () {
+      var CHANNEL_COUNT = 8;
+      var MAX_KEEP = 5;      // >5 is invalid (ch6 reserved for PCM/DAC)
+      var PCM_LIMIT = 4;     // >4 drops the original PCM track
+
+      var channelsEl = document.getElementById('channels');
+      var countEl = document.getElementById('count');
+      var errEl = document.getElementById('err');
+      var warnEl = document.getElementById('warn');
+      var fileEl = document.getElementById('file');
+      var convertEl = document.getElementById('convert');
+      var statusEl = document.getElementById('status');
+      var downloadEl = document.getElementById('download');
+
+      var checks = [];
+      for (var i = 0; i < CHANNEL_COUNT; i++) {
+        var wrap = document.createElement('label');
+        wrap.className = 'chan';
+        var box = document.createElement('input');
+        box.type = 'checkbox';
+        box.value = String(i);
+        box.addEventListener('change', refresh);
+        var span = document.createElement('span');
+        span.textContent = 'FM' + (i + 1);
+        wrap.appendChild(box);
+        wrap.appendChild(span);
+        channelsEl.appendChild(wrap);
+        checks.push(box);
+      }
+
+      function selected() {
+        return checks.filter(function (b) { return b.checked; })
+                     .map(function (b) { return parseInt(b.value, 10); });
+      }
+
+      function refresh() {
+        var sel = selected();
+        countEl.textContent = sel.length + ' selected';
+
+        var tooMany = sel.length > MAX_KEEP;
+        errEl.classList.toggle('show', tooMany);
+        if (tooMany) {
+          errEl.textContent = 'Too many channels: pick at most ' + MAX_KEEP +
+            ' (YM2612 channel 6 is reserved for PCM).';
+        }
+
+        var dropsPcm = sel.length > PCM_LIMIT && !tooMany;
+        warnEl.classList.toggle('show', dropsPcm);
+        if (dropsPcm) {
+          warnEl.textContent = 'Warning: with more than ' + PCM_LIMIT +
+            ' FM channels, any PCM (OKIM6258) audio in the source will be dropped.';
+        }
+
+        convertEl.disabled = !fileEl.files.length || sel.length === 0 || tooMany;
+      }
+
+      fileEl.addEventListener('change', refresh);
+
+      convertEl.addEventListener('click', function () {
+        var file = fileEl.files[0];
+        var sel = selected();
+        if (!file || !sel.length) { return; }
+
+        convertEl.disabled = true;
+        statusEl.textContent = 'Reading source…';
+
+        var reader = new FileReader();
+        reader.onload = function () {
+          var input = new Uint8Array(reader.result);
+          statusEl.textContent = 'Converting…';
+          // Fresh module instance per run keeps the virtual FS and chip state clean.
+          createVgmModule().then(function (Module) {
+            try {
+              Module.FS.writeFile('/input.vgm', input);
+              var list = sel.slice().sort(function (a, b) { return a - b; }).join(',');
+              var code = Module.callMain(['/input.vgm', '/output.vgm', '--fm-channels', list]);
+              if (code !== 0) {
+                statusEl.textContent = 'Conversion failed (exit code ' + code + '). See the console for details.';
+                convertEl.disabled = false;
+                return;
+              }
+              var out = Module.FS.readFile('/output.vgm');
+              triggerDownload(out, file.name);
+              statusEl.textContent = 'Done — ' + out.length + ' bytes written.';
+            } catch (e) {
+              statusEl.textContent = 'Error: ' + (e && e.message ? e.message : e);
+            } finally {
+              convertEl.disabled = false;
+              refresh();
+            }
+          }).catch(function (e) {
+            statusEl.textContent = 'Failed to load the converter module: ' + e;
+            convertEl.disabled = false;
+          });
+        };
+        reader.onerror = function () {
+          statusEl.textContent = 'Could not read the selected file.';
+          convertEl.disabled = false;
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      function triggerDownload(bytes, sourceName) {
+        var base = sourceName.replace(/\.(vgm|vgz)$/i, '');
+        var blob = new Blob([bytes], { type: 'application/octet-stream' });
+        var url = URL.createObjectURL(blob);
+        downloadEl.href = url;
+        downloadEl.download = base + '.md.vgm';
+        downloadEl.click();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+      }
+
+      refresh();
+    })();
+  </script>
+</body>
+</html>

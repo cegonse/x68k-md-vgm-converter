@@ -59,6 +59,16 @@ if ! "$CC_BIN" "$zlib_check_dir/zlibcheck.c" -lz -o "$zlib_check_dir/zlibcheck" 
 fi
 rm -rf "$zlib_check_dir"
 
+# Emscripten toolchain: only needed for the optional `make web` (WebAssembly)
+# build, so a missing toolchain is a warning, not a hard failure.
+echo "==> checking Emscripten toolchain (emcc, emcmake)"
+for web_tool in emcc emcmake; do
+    command -v "$web_tool" >/dev/null 2>&1 || {
+        echo "  warning: '$web_tool' not found; 'make web' will be unavailable" >&2
+        echo "           (install/activate the Emscripten SDK to enable the web build)" >&2
+    }
+done
+
 if command -v sha256sum >/dev/null 2>&1; then
     sha256_of() { sha256sum "$1" | awk '{print $1}'; }
 elif command -v shasum >/dev/null 2>&1; then
