@@ -3,7 +3,3 @@
 
 # Populated by scripts/init.sh (external tools, never vendored)
 /external/
-
-# WebAssembly build outputs from `make web` (the page is tracked, not these)
-/web/vgmconv.js
-/web/vgmconv.wasm

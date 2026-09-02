@@ -41,19 +41,23 @@ test: ensure-init
 	cmake --build $(BUILD_DIR) --target build_tests
 	"$(CEST_RUNNER)" $(BUILD_DIR)/
 
-# Build the WebAssembly converter + bootstrap page into web/. The C core is
-# reused verbatim (main.c drives App_Run); the page calls it over Emscripten's
-# virtual FS. Requires an Emscripten toolchain (emcc) in PATH.
+# Build the WebAssembly converter into build/web/ and assemble a servable
+# directory there (WASM glue + the page source from web/). The C core is reused
+# verbatim (main.c drives App_Run); the page calls it over Emscripten's virtual
+# FS. web/ holds only source; all generated artifacts live under build/web/.
+# Requires an Emscripten toolchain (emcc) in PATH.
 web:
 	@command -v emcc >/dev/null 2>&1 || { \
 	  echo "error: emcc not found; install/activate the Emscripten SDK" >&2; exit 1; }
+	mkdir -p $(BUILD_DIR)/web
 	emcc $(TOOL_SOURCES) -Iinc -std=c99 -O2 -sUSE_ZLIB=1 \
 	  -sMODULARIZE=1 -sEXPORT_NAME=createVgmModule \
 	  -sEXPORTED_RUNTIME_METHODS=callMain,FS \
 	  -sINVOKE_RUN=0 -sEXIT_RUNTIME=0 -sALLOW_MEMORY_GROWTH=1 \
-	  -o $(WEB_DIR)/vgmconv.js
-	@echo "==> web build ready: open $(WEB_DIR)/index.html via a local HTTP server"
+	  -o $(BUILD_DIR)/web/vgmconv.js
+	cp $(WEB_DIR)/index.html $(BUILD_DIR)/web/index.html
+	@echo "==> web build ready: serve $(BUILD_DIR)/web/ over HTTP (e.g. python3 -m http.server -d $(BUILD_DIR)/web)"
 
 # Clean build artifacts only; leave external/ intact (re-fetching is costly).
 clean:
-	rm -rf $(BUILD_DIR) $(WEB_DIR)/vgmconv.js $(WEB_DIR)/vgmconv.wasm
+	rm -rf $(BUILD_DIR)
