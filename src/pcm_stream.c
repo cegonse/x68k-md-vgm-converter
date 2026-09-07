@@ -34,6 +34,11 @@ static void writeLE32(uint8_t *p, uint32_t value) {
   p[3] = (value >> 24) & 0xFF;
 }
 
+static uint32_t playbackRate(PcmStream *self) {
+  uint32_t divider = (uint32_t)oki_dividers[self->oki_flags & 0x03];
+  return (self->oki_clock + divider / 2) / divider;
+}
+
 static uint8_t to8bit(int16_t sample) {
   int value = (sample >> 6) + 0x80;
   if (value < 0) {
@@ -131,9 +136,18 @@ void PcmStream_DacStream(PcmStream *self, uint8_t command, const uint8_t *operan
       VGMWriter_DacStream(self->writer, VGM_DAC_SET_DATA, md, 4);
       break;
     }
-    case VGM_DAC_SET_FREQ:
-      VGMWriter_DacStream(self->writer, VGM_DAC_SET_FREQ, operands, length);
+    case VGM_DAC_SET_FREQ: {
+      /* The source rate is the OKIM6258 data rate; our block is decoded PCM
+       * at one sample per byte, and the OKI yields two samples per ADPCM
+       * byte, so playback runs at the full audible rate (clock/divider) --
+       * double the source value. */
+      (void)length;
+      uint8_t md[5];
+      md[0] = operands[0];
+      writeLE32(md + 1, playbackRate(self));
+      VGMWriter_DacStream(self->writer, VGM_DAC_SET_FREQ, md, 5);
       break;
+    }
     case VGM_DAC_START: {
       uint8_t md[10];
       md[0] = operands[0];

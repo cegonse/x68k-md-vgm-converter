@@ -91,6 +91,19 @@ describe("PcmStream", []() {
     VGMWriter_Destroy(w);
   });
 
+  it("sets the DAC-stream frequency to the decoded-PCM playback rate", []() {
+    ErrorCode err = ERR_INTERNAL;
+    VGMWriter *w = VGMWriter_Create(7670442, 0, &err);
+    PcmStream *p = PcmStream_Create(8000000, 0x06, w, &err);  // 8 MHz, divider 512
+    // source stream freq is the OKI data rate; our decoded PCM must play at
+    // clock/divider = 8000000/512 = 15625 = 0x3D09 (2x the 7813 data rate).
+    uint8_t freq[] = {0x00, 0x00, 0x00, 0x00, 0x00};  // source freq bytes ignored
+    PcmStream_DacStream(p, 0x92, freq, 5);
+    expect(contains(streamOf(w), {0x92, 0x00, 0x09, 0x3D, 0x00, 0x00})).toBeTruthy();
+    PcmStream_Destroy(p);
+    VGMWriter_Destroy(w);
+  });
+
   it("scales long-start offset and length by 2 (ADPCM -> PCM doubling)", []() {
     ErrorCode err = ERR_INTERNAL;
     VGMWriter *w = VGMWriter_Create(7670442, 0, &err);
